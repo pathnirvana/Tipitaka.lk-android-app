@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- use the primary vuetify color -->
+    <color name="colorPrimary">#C63100</color>
+    <color name="colorPrimaryDark">#C63100</color>
+    <color name="colorAccent">#C63100</color>
+</resources>
