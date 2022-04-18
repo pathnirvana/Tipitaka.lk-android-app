@@ -176,7 +176,9 @@ public class WebAppInterface {
 
     @JavascriptInterface
     public String getBjtParams() {
-        return bjtBooksFolder + "." + bjtImageExt;
+        if (bjtBooksFolder.isEmpty())
+            return "";
+        return bjtBooksFolder + "|" + bjtImageExt;
     }
     private boolean initBjtParams() {
         //Context context = this.getApplicationContext();
