@@ -1,4 +1,5 @@
 <resources>
     <string name="app_name">Tipitaka.lk</string>
-    <string name="app_name_long">Tipitaka.lk - බුද්ධ ජයන්ති</string>
+    <string name="app_name_long">සිංහල ත්‍රිපිටකය සහ අටුවාව</string>
+    <string name="title_ftsdb">Full Text Search</string>
 </resources>

@@ -117,8 +117,8 @@ public class WebAppInterface {
     //}
 
     private String getDbPath(String type) {
-        return dbRootPath + type + ".db";
-    }
+        return type + ".db";
+    } // dbRootPath +  removed (asset pack delivery
 
     private String getVersionedDbName(String dbPath) {
         File fDbPath = new File(dbPath);

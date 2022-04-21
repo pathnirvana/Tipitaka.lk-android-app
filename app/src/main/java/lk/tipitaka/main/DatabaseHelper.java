@@ -49,6 +49,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 //if (inDbAssetsPath.equals("static/db/dict-all.db")) {
                 //    copiedSize = copyFromURL("https://tipitaka.lk/library/674");
                 //} else {
+                // a separate asset pack was created with the db files since the size with dbs exceeds 150mb
+                // no need to copyFromURL anymore
                 copiedSize = copyFromAssets();
                 //}
                 Log.i("LOG_TAG", "Copied db " + inDbAssetsPath + " of size " + copiedSize);
