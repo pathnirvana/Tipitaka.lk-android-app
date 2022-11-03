@@ -4,8 +4,6 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
-//import io.requery.android.database.sqlite.SQLiteDatabase;
-//import io.requery.android.database.sqlite.SQLiteOpenHelper;
 
 import android.util.Log;
 
@@ -19,18 +17,19 @@ import java.net.URL;
 import java.util.zip.ZipInputStream;
 
 public class DatabaseHelper extends SQLiteOpenHelper {
-    private Context context;
+    private final Context context;
     private SQLiteDatabase db = null;
 
-    private String vDbName; //the extension may be .sqlite or .db
-    private String inDbAssetsPath;
-    private File outDbFile;
+    private final String vDbName; //the extension may be .sqlite or .db
+    private final String inDbAssetsPath;
+    private final File outDbFile;
 
     public DatabaseHelper(Context context, String vDbName, String inDbPath) throws IOException {
         super(context, vDbName, null, 1);
         this.context = context;
         this.vDbName = vDbName;
         this.inDbAssetsPath = inDbPath;
+        //Log.i("LOG_TAG", String.join(",", context.getAssets().list("")));
 
         this.outDbFile = context.getDatabasePath(vDbName);
         if (outDbFile.exists()) {
@@ -55,7 +54,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 //}
                 Log.i("LOG_TAG", "Copied db " + inDbAssetsPath + " of size " + copiedSize);
             } catch (IOException e) {
-                Log.e("LOG_TAG", "Error copying db " + e.toString());
+                Log.e("LOG_TAG", "Error copying db " + e);
                 throw e;
             }
             openDatabase();
@@ -71,6 +70,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 c.moveToNext();
             }
         }
+        c.close();
     }
 
     public Cursor runQuery(String sql, String[] params) {
@@ -100,7 +100,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         //Open the empty db as the output stream
         OutputStream databaseOut = new FileOutputStream(outDbFile);
 
-        // transfer byte to inputfile to outputfile
+        // transfer byte to input file to output file
         byte[] buffer = new byte[1024 * 128];
         int length, copiedSize = 0;
         while ((length = assetsIn.read(buffer)) > 0) {
