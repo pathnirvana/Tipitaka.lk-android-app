@@ -5,10 +5,10 @@ android {
     compileSdkVersion 34
     defaultConfig {
         applicationId "lk.tipitaka.main"
-        minSdkVersion 19
+        minSdkVersion 24
         targetSdkVersion 34
-        versionCode 14
-        versionName "1.4"
+        versionCode 15
+        versionName "3.0"
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
     }
     buildTypes {

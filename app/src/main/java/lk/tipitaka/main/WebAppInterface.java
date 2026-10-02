@@ -94,6 +94,7 @@ public class WebAppInterface {
     public String openDbs(JSONObject jsonVersions) throws IOException {
         Log.i("LOG_TAG", "db versions initialized string " + jsonVersions);
         dbVersions = jsonVersions;
+        deleteLegacyDbs();
         Iterator<String> types = dbVersions.keys();
         while(types.hasNext()) {
             String dbPath = getDbPath(types.next());
@@ -101,6 +102,18 @@ public class WebAppInterface {
             openedDbs.put(vDbName, new DatabaseHelper(mContext, vDbName, dbPath));
         }
         return "Initialized"; // not really needed
+    }
+
+    /** v3 replaced fts.db with text.db - delete the old copies (about 476 MB) once */
+    private void deleteLegacyDbs() {
+        File dbDir = mContext.getDatabasePath("x").getParentFile();
+        File[] files = dbDir != null ? dbDir.listFiles() : null;
+        if (files == null) return;
+        for (File f : files) {
+            if (f.getName().matches("^\\d+@fts\\.db(-journal|-wal|-shm)?$")) {
+                Log.i("LOG_TAG", "Deleting legacy db " + f.getPath() + " " + f.delete());
+            }
+        }
     }
 
     public String runSqliteQuery(JSONObject params) throws JSONException {
