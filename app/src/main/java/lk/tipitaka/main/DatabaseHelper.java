@@ -32,16 +32,20 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         //Log.i("LOG_TAG", String.join(",", context.getAssets().list("")));
 
         this.outDbFile = context.getDatabasePath(vDbName);
-        if (outDbFile.exists()) {
+        if (outDbFile.exists() && openDatabase() == 0) {
+            // an empty db left by a failed copy (before v3 the empty db was created before copying)
+            Log.e("LOG_TAG", "Database has no tables, copying again " + vDbName);
+            db.close();
+            db = null;
+            SQLiteDatabase.deleteDatabase(outDbFile);
+        }
+        if (db != null) {
             Log.i("LOG_TAG", "Database exists " + vDbName);
-            openDatabase();
         } else {
             Log.i("LOG_TAG", "Database doesn't exist " + vDbName);
             // try to delete any older versions before copying the new version
             deleteOldVersions(vDbName);
 
-            getReadableDatabase();
-            close(); // needed for android P (9)
             try {
                 int copiedSize;
                 // for now the apk size is less than 150mb hence all dbs put in assets
@@ -54,16 +58,18 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 //}
                 Log.i("LOG_TAG", "Copied db " + inDbAssetsPath + " of size " + copiedSize);
             } catch (IOException e) {
-                Log.e("LOG_TAG", "Error copying db " + e);
+                Log.e("LOG_TAG", "Error copying db " + e); // in a debug run the asset pack is missing - see android-assets.sh --debug-dbs
                 throw e;
             }
             openDatabase();
         }
     }
 
-    private void openDatabase() {
+    /** returns the number of tables */
+    private int openDatabase() {
         db = SQLiteDatabase.openDatabase(outDbFile.getPath(), null, SQLiteDatabase.OPEN_READONLY);
-        Cursor c = db.rawQuery("SELECT name FROM sqlite_master WHERE type ='table' AND name NOT LIKE 'sqlite_%'", null);
+        Cursor c = db.rawQuery("SELECT name FROM sqlite_master WHERE type ='table' AND name NOT LIKE 'sqlite_%' AND name != 'android_metadata'", null);
+        int tables = c.getCount();
         if (c.moveToFirst()) {
             while ( !c.isAfterLast() ) {
                 Log.i("LOG_TAG","Table Name=> "+c.getString(0));
@@ -71,6 +77,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             }
         }
         c.close();
+        return tables;
     }
 
     public Cursor runQuery(String sql, String[] params) {
@@ -83,12 +90,15 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     private void deleteOldVersions(String vDbName) {
         String[] parts = vDbName.split("@");
         int dbVersion = Integer.parseInt(parts[0]);
-        while (dbVersion > 0) {
-            dbVersion--;
-            File oldDbFile = context.getDatabasePath("" + dbVersion + "@" + parts[1]);
-            if (oldDbFile.exists()) {
+        // list the folder - text.db versions are yyMMddHH so checking every lower version would take minutes
+        File[] files = outDbFile.getParentFile() != null ? outDbFile.getParentFile().listFiles() : null;
+        if (files == null) return;
+        for (File oldDbFile : files) {
+            String[] oldParts = oldDbFile.getName().split("@", 2);
+            if (oldParts.length == 2 && oldParts[1].equals(parts[1]) && oldParts[0].matches("\\d+")
+                    && Long.parseLong(oldParts[0]) < dbVersion) {
                 Log.i("LOG_TAG", "Deleting old db " + oldDbFile.getPath());
-                SQLiteDatabase.deleteDatabase(oldDbFile);
+                SQLiteDatabase.deleteDatabase(oldDbFile); // also deletes the -journal/-wal/-shm files
             }
         }
     }
@@ -97,21 +107,29 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         //Open your local db as the input stream
         InputStream assetsIn = context.getAssets().open(inDbAssetsPath);
 
-        //Open the empty db as the output stream
-        OutputStream databaseOut = new FileOutputStream(outDbFile);
+        // copy to a temp file and rename when done - an interrupted copy must not leave a db that "exists"
+        File parent = outDbFile.getParentFile();
+        if (parent != null && !parent.exists() && !parent.mkdirs()) throw new IOException("Cannot create " + parent);
+        File tmpFile = new File(outDbFile.getPath() + ".tmp");
+        OutputStream databaseOut = new FileOutputStream(tmpFile);
 
         // transfer byte to input file to output file
         byte[] buffer = new byte[1024 * 128];
         int length, copiedSize = 0;
-        while ((length = assetsIn.read(buffer)) > 0) {
-            databaseOut.write(buffer, 0, length);
-            copiedSize += length;
+        try {
+            while ((length = assetsIn.read(buffer)) > 0) {
+                databaseOut.write(buffer, 0, length);
+                copiedSize += length;
+            }
+            databaseOut.flush();
+        } finally {
+            databaseOut.close();
+            assetsIn.close();
         }
-
-        //Close the streams
-        databaseOut.flush();
-        databaseOut.close();
-        assetsIn.close();
+        if (!tmpFile.renameTo(outDbFile)) {
+            tmpFile.delete();
+            throw new IOException("Cannot rename " + tmpFile + " to " + outDbFile);
+        }
         return copiedSize;
     }
 
